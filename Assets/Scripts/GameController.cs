@@ -14,11 +14,27 @@ namespace Ludum_Dare_46
 			public int MaxGateTimer; // The maximum amount of time the player has to get to the next gate
 			[Range(0, 100)] public float InitialPhoneCharge; // The charge on the phone at the start of a game
 			[Range(0, 5)] public float PhoneChargeDrainRate; // How fast the phone will drain
+			[Range(0, 100)] public float PhoneChargeRate; // How fast the phone charges while connected to an outlet
 		}
 		public ConfigurationData Conf = new ConfigurationData();
 
 		internal float CurrentGateTimer { get; private set; } // The timer for getting to the current gate
 		internal float CurrentPhoneCharge { get; private set; } // The current charge on the phone battery
+
+		private bool IsCharging = false; // Whether the player is currently charging their phone via outlet
+		public bool GetIsCharging() => IsCharging;
+		public void SetIsCharging(bool charging) => IsCharging = charging;
+
+		[Serializable]
+		public class ObjectRefs
+		{
+			public Tutorial Tutorial; // The starting screen that the player sees when starting a new game
+			public GateNotification GateNotification; // Notification system for sending gate change messages to the player
+			public Notification PhoneNotification; // Notification system for sending texts to the player via phone
+		}
+		public ObjectRefs Refs = new ObjectRefs();
+
+		private int FlightNumber; // This is the flight the player is supposed to catch this round!
 
 		// Start is called before the first frame update
 		void Start()
@@ -27,8 +43,12 @@ namespace Ludum_Dare_46
 			ResetGateTimer();
 			CurrentPhoneCharge = Conf.InitialPhoneCharge;
 
-			// TODO :: This will eventually be moved to the StartGame method
-			StartCoroutine(StartGateTimer());
+			// Set the flight number for this round
+			FlightNumber = UnityEngine.Random.Range(1000, 10000);
+
+			// Show the tutorial object
+			Refs.Tutorial.SetStartMessage(FlightNumber.ToString());
+			Refs.Tutorial.StartTutorial();
 		}
 
 		// Resets the gate timer to a new amount of time
@@ -56,11 +76,27 @@ namespace Ludum_Dare_46
 		void Update()
 		{
 			// Handle phone charge timer
-			if (CurrentPhoneCharge > 0) CurrentPhoneCharge -= Conf.PhoneChargeDrainRate * Time.deltaTime;
-			else CurrentPhoneCharge = 0; // TODO :: This is where the player should lose the game!
+			if (IsCharging)
+			{
+				// Charge the phone battery if the player is standing next to an outlet
+				if (CurrentPhoneCharge < 100) CurrentPhoneCharge += Conf.PhoneChargeRate * Time.deltaTime;
+				else CurrentPhoneCharge = 100;
+			}
+			else
+			{
+				if (CurrentPhoneCharge > 0) CurrentPhoneCharge -= Conf.PhoneChargeDrainRate * Time.deltaTime;
+				else CurrentPhoneCharge = 0; // TODO :: This is where the player should lose the game!
+			}
 
 			//print("GameController::CurrentGateTimer = " + CurrentGateTimer);
 			//print("GameController::CurrentPhoneCharge = " + CurrentPhoneCharge);
+		}
+
+		public void StartGame()
+		{
+			// TODO Start the game
+			// Start the gate timer
+			StartCoroutine(StartGateTimer());
 		}
 	}
 }

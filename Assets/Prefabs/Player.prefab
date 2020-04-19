@@ -47,8 +47,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1c39ecfaaa3fc8b448d13f7be09a2fba, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  GameController: {fileID: 0}
   Conf:
-    MoveSpeed: 0
+    MoveSpeed: 8
 --- !u!95 &825747034
 Animator:
   serializedVersion: 3

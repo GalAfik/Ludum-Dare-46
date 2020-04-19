@@ -7,6 +7,8 @@ namespace Ludum_Dare_46
 {
 	public class Player : MonoBehaviour
 	{
+		public GameController GameController; // The game controller object
+
 		[Serializable]
 		public class ConfigurationData
 		{
@@ -46,6 +48,24 @@ namespace Ludum_Dare_46
 
 			// Set the last known horizontal movement value
 			if (MoveVector.x != 0) PreviousHorizontal = MoveVector.normalized.x;
+		}
+
+		private void OnTriggerEnter2D(Collider2D collision)
+		{
+			// If the player enters an outlet's zone, their phone will start charging
+			if (collision.gameObject.CompareTag("Outlet"))
+			{
+				GameController.SetIsCharging(true);
+			}
+		}
+
+		private void OnTriggerExit2D(Collider2D collision)
+		{
+			// If the player exits a charging area, their phone stops charging and starts draining again
+			if (collision.gameObject.CompareTag("Outlet"))
+			{
+				GameController.SetIsCharging(false);
+			}
 		}
 	}
 }
