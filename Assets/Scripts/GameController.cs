@@ -14,7 +14,9 @@ namespace Ludum_Dare_46
 			public int MaxGateTimer; // The maximum amount of time the player has to get to the next gate
 			[Range(0, 100)] public float InitialPhoneCharge; // The charge on the phone at the start of a game
 			[Range(0, 5)] public float PhoneChargeDrainRate; // How fast the phone will drain
+			[Range(1, 10)] public float PhoneChargeMaxDrainRateModifier; // The maximum modifier that can be applied to the charge drain rate
 			[Range(0, 100)] public float PhoneChargeRate; // How fast the phone charges while connected to an outlet
+			public int ScorePerSecond; // How many points the player scores per second they survive
 		}
 		public ConfigurationData Conf = new ConfigurationData();
 
@@ -34,7 +36,10 @@ namespace Ludum_Dare_46
 		}
 		public ObjectRefs Refs = new ObjectRefs();
 
-		private int FlightNumber; // This is the flight the player is supposed to catch this round!
+		internal int FlightNumber { get; private set; } // This is the flight the player is supposed to catch this round!
+		internal float Score { get; private set; } // This is the player's current score, to be displayed at the end of the round
+		private bool Playing = false; // Is the game playing or paused?
+		public bool IsPlaying() => Playing;
 
 		// Start is called before the first frame update
 		void Start()
@@ -75,26 +80,53 @@ namespace Ludum_Dare_46
 		// Update is called once per frame
 		void Update()
 		{
-			// Handle phone charge timer
-			if (IsCharging)
+			if (Playing)
 			{
-				// Charge the phone battery if the player is standing next to an outlet
-				if (CurrentPhoneCharge < 100) CurrentPhoneCharge += Conf.PhoneChargeRate * Time.deltaTime;
-				else CurrentPhoneCharge = 100;
-			}
-			else
-			{
-				if (CurrentPhoneCharge > 0) CurrentPhoneCharge -= Conf.PhoneChargeDrainRate * Time.deltaTime;
-				else CurrentPhoneCharge = 0; // TODO :: This is where the player should lose the game!
-			}
+				// Handle phone charge timer
+				if (IsCharging)
+				{
+					// Charge the phone battery if the player is standing next to an outlet
+					if (CurrentPhoneCharge < 100) CurrentPhoneCharge += Conf.PhoneChargeRate * Time.deltaTime;
+					else CurrentPhoneCharge = 100;
+				}
+				else
+				{
+					// The more charge the phone carries, the fast it drains!!!
+					float phoneDrainModifier = GetPhoneDrainModifier(CurrentPhoneCharge, Conf.PhoneChargeMaxDrainRateModifier, 50);
+					if (CurrentPhoneCharge > 0) CurrentPhoneCharge -= Conf.PhoneChargeDrainRate * phoneDrainModifier * Time.deltaTime;
+					else
+					{
+						CurrentPhoneCharge = 0; // TODO :: This is where the player should lose the game!
+					}
+				}
 
-			//print("GameController::CurrentGateTimer = " + CurrentGateTimer);
-			//print("GameController::CurrentPhoneCharge = " + CurrentPhoneCharge);
+				// Update the Score
+				Score += Conf.ScorePerSecond * Time.deltaTime;
+			}
 		}
 
+		/**
+		 * currentCharge - the current phone charge remaining
+		 * w - The maximum drain modifier when the battery is full
+		 * normalChargeconstraint - the amount of charge remaining where the modifier gets closer to 1, thus normal drain
+		**/
+		float GetPhoneDrainModifier(float currentCharge, float maxDrainRate, float normalChargeConstraint)
+		{
+			// When the current charge is at a certain point, the modifier should be 1 (normal)
+			// Otherwise, it should be determined linearly
+			switch (currentCharge)
+			{
+				case var _ when currentCharge <= normalChargeConstraint:
+					return 1;
+				default:
+					return ((maxDrainRate - 1) / normalChargeConstraint) * (currentCharge - normalChargeConstraint) + 1;
+			}
+		}
+
+		// Start all mechanics and timers
 		public void StartGame()
 		{
-			// TODO Start the game
+			Playing = true;
 			// Start the gate timer
 			StartCoroutine(StartGateTimer());
 		}

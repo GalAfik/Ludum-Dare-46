@@ -29,25 +29,28 @@ namespace Ludum_Dare_46
 		// Update is called once per frame
 		void Update()
 		{
-			// Reset the movement vector
-			MoveVector = Vector2.zero;
+			if (GameController.IsPlaying())
+			{
+				// Reset the movement vector
+				MoveVector = Vector2.zero;
 
-			// Add the current axis inputs to the player's movement
-			MoveVector.x = Input.GetAxis("Horizontal");
-			MoveVector.y = Input.GetAxis("Vertical");
+				// Add the current axis inputs to the player's movement
+				MoveVector.x = Input.GetAxis("Horizontal");
+				MoveVector.y = Input.GetAxis("Vertical");
 
-			// Apply force to the player's movement
-			transform.position += (Vector3)MoveVector.normalized * Conf.MoveSpeed * Time.deltaTime;
+				// Apply force to the player's movement
+				transform.position += (Vector3)MoveVector.normalized * Conf.MoveSpeed * Time.deltaTime;
 
-			// Set Animator vars
-			Animator.SetFloat("MoveSpeed", MoveVector.magnitude);
+				// Set Animator vars
+				Animator.SetFloat("MoveSpeed", MoveVector.magnitude);
 
-			// Check if the player has switched horizontal movement directions
-			if (MoveVector.normalized.x * PreviousHorizontal < 0)
-				Animator.SetTrigger("FlipTrigger");
+				// Check if the player has switched horizontal movement directions
+				if (MoveVector.normalized.x * PreviousHorizontal < 0)
+					Animator.SetTrigger("FlipTrigger");
 
-			// Set the last known horizontal movement value
-			if (MoveVector.x != 0) PreviousHorizontal = MoveVector.normalized.x;
+				// Set the last known horizontal movement value
+				if (MoveVector.x != 0) PreviousHorizontal = MoveVector.normalized.x;
+			}
 		}
 
 		private void OnTriggerEnter2D(Collider2D collision)
