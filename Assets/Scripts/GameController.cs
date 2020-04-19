@@ -38,6 +38,7 @@ namespace Ludum_Dare_46
 
 		internal int FlightNumber { get; private set; } // This is the flight the player is supposed to catch this round!
 		internal float Score { get; private set; } // This is the player's current score, to be displayed at the end of the round
+		internal float TimeSurvived { get; private set; } // This is how long the player has been playing this round
 		private bool Playing = false; // Is the game playing or paused?
 		public bool IsPlaying() => Playing;
 
@@ -102,7 +103,15 @@ namespace Ludum_Dare_46
 
 				// Update the Score
 				Score += Conf.ScorePerSecond * Time.deltaTime;
+				TimeSurvived += Time.deltaTime;
 			}
+		}
+
+		private string FormatTime(float time)
+		{
+			int minutes = (int) time / 60;
+			int seconds = (int) time - 60 * minutes;
+			return string.Format("{0:00}:{1:00}", minutes, seconds);
 		}
 
 		/**
