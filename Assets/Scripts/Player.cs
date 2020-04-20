@@ -21,11 +21,18 @@ namespace Ludum_Dare_46
 
 		private Animator Animator; // Animation Controller
 
+		private float VerticalSpeedModifier;
+		private float HorizontalSpeedModifier;
+
 		private void Awake()
 		{
 			// Get the Animator object
 			Animator = GetComponent<Animator>();
-		}
+
+			// Set the initial speed modifiers to 1
+			VerticalSpeedModifier = 1;
+			HorizontalSpeedModifier = 1;
+	}
 
 		// Update is called once per frame
 		void Update()
@@ -42,8 +49,12 @@ namespace Ludum_Dare_46
 				// Apply a modifier to the player's speed when the gate timer is below a certain point
 				float moveSpeedModifier = GetMoveSpeedModifier(GameController.CurrentGateTimer, Conf.MaxSpeedModifier, 10);
 
+				Vector3 NormalizedMoveVector = (Vector3)MoveVector.normalized * Conf.MoveSpeed * moveSpeedModifier;
+				// Apply horizontal and vertical speed modifiers when needed
+				NormalizedMoveVector.x *= HorizontalSpeedModifier != 0 ? HorizontalSpeedModifier : 1;
+				NormalizedMoveVector.y *= VerticalSpeedModifier != 0 ? VerticalSpeedModifier : 1;
 				// Apply force to the player's movement
-				transform.position += (Vector3) MoveVector.normalized * Conf.MoveSpeed * moveSpeedModifier * Time.deltaTime;
+				transform.position += NormalizedMoveVector * Time.deltaTime;
 
 				// Set Animator vars
 				Animator.SetFloat("MoveSpeed", MoveVector.magnitude);
@@ -86,6 +97,13 @@ namespace Ludum_Dare_46
 			{
 				GameController.SetIsCharging(false);
 			}
+
+			// When the player is no longer touching a PeopleMover, their speed modifiers are reset
+			if (collision.gameObject.CompareTag("PeopleMover"))
+			{
+				VerticalSpeedModifier = 1;
+				HorizontalSpeedModifier = 1;
+			}
 		}
 
 		float GetMoveSpeedModifier(float currentGateTimer, float maxSpeedModifier, float normalSpeedConstraint)
@@ -98,6 +116,23 @@ namespace Ludum_Dare_46
 					return 1;
 				default:
 					return (-(maxSpeedModifier - 1) / normalSpeedConstraint) * (currentGateTimer - normalSpeedConstraint) + 1;
+			}
+		}
+
+		private void OnTriggerStay2D(Collider2D collision)
+		{
+			// When the player is touching a people mover object, they should move faster
+			if (collision.gameObject.CompareTag("PeopleMover"))
+			{
+				// Get the modifier
+				float modifier = collision.gameObject.GetComponent<PeopleMover>().MoveSpeedModifier;
+
+				// Only apply the speed modifier for the up direction of the people mover
+				if (collision.gameObject.transform.up.y * MoveVector.y < 0) VerticalSpeedModifier = 1 / (modifier * 2);
+				else VerticalSpeedModifier = modifier;
+
+				if (collision.gameObject.transform.up.x * MoveVector.x < 0) HorizontalSpeedModifier = 1 / (modifier * 2);
+				else HorizontalSpeedModifier = modifier;
 			}
 		}
 	}

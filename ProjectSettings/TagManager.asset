@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Outlet
   - Gate
+  - PeopleMover
   layers:
   - Default
   - TransparentFX
