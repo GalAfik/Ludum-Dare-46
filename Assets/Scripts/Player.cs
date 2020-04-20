@@ -13,6 +13,7 @@ namespace Ludum_Dare_46
 		public class ConfigurationData
 		{
 			public float MoveSpeed; // How fast a player moves through the world
+			[Range(1.0f, 2.0f)] public float MaxSpeedModifier = 1.2f; // This modifier is applied to the move speed when the gate timer gets close to 0
 		}
 		public ConfigurationData Conf = new ConfigurationData();
 		private Vector2 MoveVector; // The current movement vector of the player
@@ -39,7 +40,7 @@ namespace Ludum_Dare_46
 				MoveVector.y = Input.GetAxis("Vertical");
 
 				// Apply a modifier to the player's speed when the gate timer is below a certain point
-				float moveSpeedModifier = GetMoveSpeedModifier(GameController.CurrentGateTimer, 1.2f, 10);
+				float moveSpeedModifier = GetMoveSpeedModifier(GameController.CurrentGateTimer, Conf.MaxSpeedModifier, 10);
 
 				// Apply force to the player's movement
 				transform.position += (Vector3) MoveVector.normalized * Conf.MoveSpeed * moveSpeedModifier * Time.deltaTime;
