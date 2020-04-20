@@ -2,11 +2,15 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using UnityEngine.SceneManagement;
 
 namespace Ludum_Dare_46
 {
 	public class GameController : MonoBehaviour
 	{
+		public Gates TargetGate { get; private set; }
+		public bool TargetGateReached { get; set; } // Has the player reached the target gate?
+
 		[Serializable]
 		public class ConfigurationData
 		{
@@ -33,6 +37,7 @@ namespace Ludum_Dare_46
 			public Tutorial Tutorial; // The starting screen that the player sees when starting a new game
 			public GateNotification GateNotification; // Notification system for sending gate change messages to the player
 			public Notification PhoneNotification; // Notification system for sending texts to the player via phone
+			public EndGameUI EndGameUI;
 		}
 		public ObjectRefs Refs = new ObjectRefs();
 
@@ -45,9 +50,11 @@ namespace Ludum_Dare_46
 		// Start is called before the first frame update
 		void Start()
 		{
-			// Set the initial timer values
-			ResetGateTimer();
+			// Set the initial phone charge
 			CurrentPhoneCharge = Conf.InitialPhoneCharge;
+
+			// Set the initial gate timer to a large number, to avoid the game ending before a gate is selected
+			CurrentGateTimer = 99;
 
 			// Set the flight number for this round
 			FlightNumber = UnityEngine.Random.Range(1000, 10000);
@@ -69,12 +76,12 @@ namespace Ludum_Dare_46
 		// This should be called after resetting the timer with ResetGateTimer
 		IEnumerator StartGateTimer()
 		{
-			while (CurrentGateTimer > 0)
+			while (Playing && CurrentGateTimer > 0)
 			{
 				// Wait for one second
-				yield return new WaitForSeconds(1);
-				// Decrement the gate timer
-				CurrentGateTimer--;
+				yield return new WaitForSecondsRealtime(1);
+				// Decrement the gate timer if the current gate has not been reached
+				if (TargetGateReached == false) CurrentGateTimer--;
 			}
 		}
 
@@ -97,8 +104,18 @@ namespace Ludum_Dare_46
 					if (CurrentPhoneCharge > 0) CurrentPhoneCharge -= Conf.PhoneChargeDrainRate * phoneDrainModifier * Time.deltaTime;
 					else
 					{
-						CurrentPhoneCharge = 0; // TODO :: This is where the player should lose the game!
+						CurrentPhoneCharge = 0;
+						// End the game
+						StartCoroutine(EndGame());
+						Refs.EndGameUI.SetLoseMessage("Oh no, you let your phone die!");
 					}
+				}
+
+				if (CurrentGateTimer == 0)
+				{
+					// Lose the game
+					StartCoroutine(EndGame());
+					Refs.EndGameUI.SetLoseMessage("Oh no, you missed your flight!");
 				}
 
 				// Update the Score
@@ -107,11 +124,27 @@ namespace Ludum_Dare_46
 			}
 		}
 
-		private string FormatTime(float time)
+		IEnumerator EndGame()
 		{
-			int minutes = (int) time / 60;
-			int seconds = (int) time - 60 * minutes;
-			return string.Format("{0:00}:{1:00}", minutes, seconds);
+			Playing = false;
+			yield return new WaitForSeconds(2);
+
+			// Display the EndGame UI
+			Refs.EndGameUI.SetScoreMessage(TimeSurvived, Score);
+			Refs.EndGameUI.DisplayEndGameScreen();
+		}
+
+		IEnumerator GenerateFakeGateNotification()
+		{
+			while(Playing)
+			{
+				yield return new WaitForSecondsRealtime(10);
+				// Make sure a real gate message will not be sent at the same time
+				if(TargetGateReached == false &&  UnityEngine.Random.Range(0, 2) == 0)
+				{
+					Refs.GateNotification.DisplayFakeGateNotification(FlightNumber);
+				}
+			}
 		}
 
 		/**
@@ -136,8 +169,59 @@ namespace Ludum_Dare_46
 		public void StartGame()
 		{
 			Playing = true;
+
+			// Set a new target gate
+			StartCoroutine(ResetTargetGate());
+
+			// Generate a random fake gate change notification
+			StartCoroutine(GenerateFakeGateNotification());
+
 			// Start the gate timer
 			StartCoroutine(StartGateTimer());
 		}
+
+		public IEnumerator ResetTargetGate()
+		{
+			print("test");
+			// Get a random gate from all possibilities
+			Array values = Enum.GetValues(typeof(Gates));
+			System.Random random = new System.Random();
+			Gates randomGate = (Gates)values.GetValue(random.Next(values.Length));
+
+			yield return new WaitForSeconds(3);
+
+			// Set a new target gate
+			TargetGateReached = false;
+			TargetGate = randomGate;
+
+			// Send a notification to the player via the main notification bubble
+			Refs.GateNotification.DisplayGateNotification(FlightNumber, TargetGate.ToString());
+			// Send a phone notification for a gate change
+			Refs.PhoneNotification.DisplayGateMessage(TargetGate.ToString());
+
+			yield return new WaitForSeconds(1);
+
+			// Reset the gate timer
+			ResetGateTimer();
+		}
+
+		// Quit to the main menu
+		public void Quit()
+		{
+			SceneManager.LoadScene("MenuScene");
+		}
+
+		// Reload this scene
+		public void Restart()
+		{
+			SceneManager.LoadScene("MainScene");
+		}
 	}
+
+	// All possible gate options
+	[System.Serializable]
+	public enum Gates
+	{
+		A1, A2, B1, B2, C1, C2, D1, D2
+	};
 }

@@ -60,6 +60,19 @@ namespace Ludum_Dare_46
 			{
 				GameController.SetIsCharging(true);
 			}
+
+			// If the player enters a gatezone that matches the target gate in GameController, the gate should be reset
+			if (collision.gameObject.CompareTag("Gate"))
+			{
+				// Check if this gate matches the 
+				if (GameController.TargetGateReached == false && collision.gameObject.GetComponent<Gate>().TargetGate == GameController.TargetGate)
+				{
+					// Let the game controller know that the current gate has been reached
+					GameController.TargetGateReached = true;
+					// Set a new target gate
+					StartCoroutine(GameController.ResetTargetGate());
+				}
+			}
 		}
 
 		private void OnTriggerExit2D(Collider2D collision)
