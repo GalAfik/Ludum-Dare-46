@@ -38,8 +38,11 @@ namespace Ludum_Dare_46
 				MoveVector.x = Input.GetAxis("Horizontal");
 				MoveVector.y = Input.GetAxis("Vertical");
 
+				// Apply a modifier to the player's speed when the gate timer is below a certain point
+				float moveSpeedModifier = GetMoveSpeedModifier(GameController.CurrentGateTimer, 1.2f, 10);
+
 				// Apply force to the player's movement
-				transform.position += (Vector3)MoveVector.normalized * Conf.MoveSpeed * Time.deltaTime;
+				transform.position += (Vector3) MoveVector.normalized * Conf.MoveSpeed * moveSpeedModifier * Time.deltaTime;
 
 				// Set Animator vars
 				Animator.SetFloat("MoveSpeed", MoveVector.magnitude);
@@ -81,6 +84,19 @@ namespace Ludum_Dare_46
 			if (collision.gameObject.CompareTag("Outlet"))
 			{
 				GameController.SetIsCharging(false);
+			}
+		}
+
+		float GetMoveSpeedModifier(float currentGateTimer, float maxSpeedModifier, float normalSpeedConstraint)
+		{
+			// When the current gate time is at a certain point, the modifier should be 1 (normal)
+			// Otherwise, it should be determined linearly
+			switch (currentGateTimer)
+			{
+				case var _ when currentGateTimer > normalSpeedConstraint:
+					return 1;
+				default:
+					return (-(maxSpeedModifier - 1) / normalSpeedConstraint) * (currentGateTimer - normalSpeedConstraint) + 1;
 			}
 		}
 	}

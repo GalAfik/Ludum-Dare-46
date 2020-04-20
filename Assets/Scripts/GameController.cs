@@ -182,7 +182,6 @@ namespace Ludum_Dare_46
 
 		public IEnumerator ResetTargetGate()
 		{
-			print("test");
 			// Get a random gate from all possibilities
 			Array values = Enum.GetValues(typeof(Gates));
 			System.Random random = new System.Random();
