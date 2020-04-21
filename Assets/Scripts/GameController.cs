@@ -38,6 +38,8 @@ namespace Ludum_Dare_46
 			public GateNotification GateNotification; // Notification system for sending gate change messages to the player
 			public Notification PhoneNotification; // Notification system for sending texts to the player via phone
 			public EndGameUI EndGameUI;
+			public NPCController NPCController; // This manager spawns NPCs when the game starts
+			public AudioController AudioController; // This object can be used to play sounds from the Sounds enum
 		}
 		public ObjectRefs Refs = new ObjectRefs();
 
@@ -127,8 +129,7 @@ namespace Ludum_Dare_46
 		IEnumerator EndGame()
 		{
 			Playing = false;
-			yield return new WaitForSeconds(2);
-
+			yield return new WaitForSeconds(.4f);
 			// Display the EndGame UI
 			Refs.EndGameUI.SetScoreMessage(TimeSurvived, Score);
 			Refs.EndGameUI.DisplayEndGameScreen();
@@ -182,12 +183,18 @@ namespace Ludum_Dare_46
 
 		public IEnumerator ResetTargetGate()
 		{
-			// Get a random gate from all possibilities
+			// Get a random gate from all possibilities, making sure to get a different gate each time
 			Array values = Enum.GetValues(typeof(Gates));
 			System.Random random = new System.Random();
-			Gates randomGate = (Gates)values.GetValue(random.Next(values.Length));
+			// Make sure the new gate is different from the current target gate
+			Gates randomGate;
+			do
+			{
+				randomGate = (Gates)values.GetValue(random.Next(values.Length));
+			}
+			while (randomGate == TargetGate);
 
-			yield return new WaitForSeconds(3);
+			yield return new WaitForSeconds(1.2f);
 
 			// Set a new target gate
 			TargetGateReached = false;
@@ -207,12 +214,16 @@ namespace Ludum_Dare_46
 		// Quit to the main menu
 		public void Quit()
 		{
+			// Play a button press sound
+			Refs.AudioController?.Play(Sounds.BUTTON_PRESSED);
 			SceneManager.LoadScene("MenuScene");
 		}
 
 		// Reload this scene
 		public void Restart()
 		{
+			// Play a button press sound
+			Refs.AudioController?.Play(Sounds.BUTTON_PRESSED);
 			SceneManager.LoadScene("MainScene");
 		}
 	}

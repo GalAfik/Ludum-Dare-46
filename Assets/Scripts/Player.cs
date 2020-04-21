@@ -5,6 +5,7 @@ using System;
 
 namespace Ludum_Dare_46
 {
+	#pragma warning disable CS0618 // Type or member is obsolete
 	public class Player : MonoBehaviour
 	{
 		public GameController GameController; // The game controller object
@@ -21,22 +22,28 @@ namespace Ludum_Dare_46
 
 		private Animator Animator; // Animation Controller
 
-		private float VerticalSpeedModifier;
-		private float HorizontalSpeedModifier;
+		public ParticleSystem TrailParticleSystem; // The Particle system that generates a trail when the player moves over a certain speed
+
+		private Vector2 MoveVectorModifier;
 
 		private void Awake()
 		{
 			// Get the Animator object
 			Animator = GetComponent<Animator>();
 
-			// Set the initial speed modifiers to 1
-			VerticalSpeedModifier = 1;
-			HorizontalSpeedModifier = 1;
-	}
+			// Set the initial speed modifier
+			MoveVectorModifier = Vector2.zero;
+
+			// Disable the trail ps
+			TrailParticleSystem.enableEmission = false;
+		}
 
 		// Update is called once per frame
 		void Update()
 		{
+			// Make sure the player stands still while not moving
+			GetComponent<Rigidbody2D>().velocity = Vector2.zero;
+
 			if (GameController.IsPlaying())
 			{
 				// Reset the movement vector
@@ -49,22 +56,33 @@ namespace Ludum_Dare_46
 				// Apply a modifier to the player's speed when the gate timer is below a certain point
 				float moveSpeedModifier = GetMoveSpeedModifier(GameController.CurrentGateTimer, Conf.MaxSpeedModifier, 10);
 
-				Vector3 NormalizedMoveVector = (Vector3)MoveVector.normalized * Conf.MoveSpeed * moveSpeedModifier;
-				// Apply horizontal and vertical speed modifiers when needed
-				NormalizedMoveVector.x *= HorizontalSpeedModifier != 0 ? HorizontalSpeedModifier : 1;
-				NormalizedMoveVector.y *= VerticalSpeedModifier != 0 ? VerticalSpeedModifier : 1;
+				MoveVector = MoveVector.normalized * Conf.MoveSpeed * moveSpeedModifier + MoveVectorModifier;
 				// Apply force to the player's movement
-				transform.position += NormalizedMoveVector * Time.deltaTime;
+				transform.position += (Vector3) MoveVector * Time.deltaTime;
+			}
+			// Set Animator vars
+			Animator.SetFloat("MoveSpeed", MoveVector.magnitude);
 
-				// Set Animator vars
-				Animator.SetFloat("MoveSpeed", MoveVector.magnitude);
+			// Check if the player has switched horizontal movement directions
+			if (MoveVector.normalized.x * PreviousHorizontal < 0)
+				Animator.SetTrigger("FlipTrigger");
 
-				// Check if the player has switched horizontal movement directions
-				if (MoveVector.normalized.x * PreviousHorizontal < 0)
-					Animator.SetTrigger("FlipTrigger");
+			// Set the last known horizontal movement value
+			if (MoveVector.x != 0) PreviousHorizontal = MoveVector.normalized.x;
 
-				// Set the last known horizontal movement value
-				if (MoveVector.x != 0) PreviousHorizontal = MoveVector.normalized.x;
+			// If the player is moving faster than their normal speed, turn on the trail effect and change the soundtrack pitch
+			if (MoveVector.magnitude > Conf.MoveSpeed + .1f)
+			{
+				// Turn on the trail particle effect
+				TrailParticleSystem.enableEmission = true;
+				// Change the soundtrack pitch
+				float pitchModifier = ((MoveVector.magnitude / Conf.MoveSpeed) - 1) / 2;
+				GameController?.Refs.AudioController?.SetSoundtrackPitch(1 + pitchModifier);
+			}
+			else
+			{
+				TrailParticleSystem.enableEmission = false;
+				GameController?.Refs.AudioController?.SetSoundtrackPitch(1f);
 			}
 		}
 
@@ -74,6 +92,8 @@ namespace Ludum_Dare_46
 			if (collision.gameObject.CompareTag("Outlet"))
 			{
 				GameController.SetIsCharging(true);
+				// Play a phone charging sound
+				GameController?.Refs.AudioController?.Play(Sounds.PHONE_CHARGING);
 			}
 
 			// If the player enters a gatezone that matches the target gate in GameController, the gate should be reset
@@ -84,6 +104,8 @@ namespace Ludum_Dare_46
 				{
 					// Let the game controller know that the current gate has been reached
 					GameController.TargetGateReached = true;
+					// Play a success sound
+					GameController?.Refs.AudioController?.Play(Sounds.GATE_REACHED);
 					// Set a new target gate
 					StartCoroutine(GameController.ResetTargetGate());
 				}
@@ -101,8 +123,7 @@ namespace Ludum_Dare_46
 			// When the player is no longer touching a PeopleMover, their speed modifiers are reset
 			if (collision.gameObject.CompareTag("PeopleMover"))
 			{
-				VerticalSpeedModifier = 1;
-				HorizontalSpeedModifier = 1;
+				MoveVectorModifier = Vector2.zero;
 			}
 		}
 
@@ -127,12 +148,8 @@ namespace Ludum_Dare_46
 				// Get the modifier
 				float modifier = collision.gameObject.GetComponent<PeopleMover>().MoveSpeedModifier;
 
-				// Only apply the speed modifier for the up direction of the people mover
-				if (collision.gameObject.transform.up.y * MoveVector.y < 0) VerticalSpeedModifier = 1 / (modifier * 2);
-				else VerticalSpeedModifier = modifier;
-
-				if (collision.gameObject.transform.up.x * MoveVector.x < 0) HorizontalSpeedModifier = 1 / (modifier * 2);
-				else HorizontalSpeedModifier = modifier;
+				// Apply the people mover's up vector to the player's move vector
+				MoveVectorModifier = (Vector2) collision.gameObject.transform.up * modifier;
 			}
 		}
 	}
