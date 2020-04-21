@@ -183,6 +183,8 @@ namespace Ludum_Dare_46
 
 		public IEnumerator ResetTargetGate()
 		{
+			TargetGateReached = false;
+
 			// Get a random gate from all possibilities, making sure to get a different gate each time
 			Array values = Enum.GetValues(typeof(Gates));
 			System.Random random = new System.Random();
@@ -197,7 +199,6 @@ namespace Ludum_Dare_46
 			yield return new WaitForSeconds(1.2f);
 
 			// Set a new target gate
-			TargetGateReached = false;
 			TargetGate = randomGate;
 
 			// Send a notification to the player via the main notification bubble
