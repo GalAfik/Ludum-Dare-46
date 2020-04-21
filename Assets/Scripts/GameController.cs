@@ -72,6 +72,9 @@ namespace Ludum_Dare_46
 		{
 			// Sets the gate timer to a new random integer between the min and max gate timers
 			CurrentGateTimer = UnityEngine.Random.Range(Conf.MinGateTimer, Conf.MaxGateTimer + 1);
+
+			// Start the timer back up
+			TargetGateReached = false;
 		}
 
 		// This starts the current gate timer
@@ -183,8 +186,6 @@ namespace Ludum_Dare_46
 
 		public IEnumerator ResetTargetGate()
 		{
-			TargetGateReached = false;
-
 			// Get a random gate from all possibilities, making sure to get a different gate each time
 			Array values = Enum.GetValues(typeof(Gates));
 			System.Random random = new System.Random();
